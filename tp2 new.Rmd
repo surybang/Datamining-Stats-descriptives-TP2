@@ -96,6 +96,9 @@ mean(sexe=='M')
 ```
 
 ```{r}
+
+#descriptifs visuels 
+
 par(mfrow = c(2, 4))
 barplot(table(diplome[!diplome=="Aucun"]), horiz=TRUE, las=1, col= "purple", border = "white",main= "Spécialisation") # on retire les médecins sans spécialisation pour une meilleure lecture du graphique
 pie(table(sexe), col = c("pink","azure"), main = "Proportion H/F")
@@ -423,9 +426,9 @@ fig <- ggplot(melt(data.frame(mxPH=mxPH, Chla = Chla))) + geom_boxplot(aes(x = v
 fig # on les affiche sur le même graph
 
 #je trouve qu'il est plus facile de comparer les distributions avec des boxplot
-boxplot(mxPH) # mhPH boxplot
-boxplot(Chla) 
-
+boxplot(mxPH~Chla) # mhPH boxplot
+boxplot(Chla~mxPH) 
+pairs(algue[,c("mxPH","Chla")])
 
 ```
 ### TODO : On constate une distribution complètement différentes entre les 2. (phrase à faire)
@@ -458,7 +461,9 @@ cor(freq,algue$PO4)  # 0,66 étant supérieur à 0,6 on considère qu'il existe 
 lmpo4freq = lm(freq~algue$PO4)
 lmopo4freq = lm(freq~algue$oPO4)
 
+#on peut utilisers pairs()
 
+pairs(algue[,c("PO4","oPO4","freq")])
 
 #partie graphique
 
@@ -555,20 +560,13 @@ Pas de liaison linéaire car le nuage de points n'est pas structuré cependant o
 # 9. Décrire les interactions entre les variables freq et speed et entre les variables Chla et speed. Commenter.On appuiera sa réponse à l’aide d’un descriptif visuel. 
 
 ```{r}
-#cor(freq,as.factor(speed))
+#cor(algue$freq,as.factor(algue$speed))  pb numeric 
 
 
 #graphique freq par speed
 boxplot(algue$freq ~ algue$speed)
 
-#table 
 
-library(dplyr)
-freq_high <- filter(algue, speed == "high")
-freq_medium <- filter(algue, speed == "medium")
-freq_low <- filter(algue,speed =="low")
-
-mean(as.factor(algue$speed))
 #hist(freq_high)
 
 par( mfrow =c(1 ,2))
@@ -576,7 +574,7 @@ test<- ggplot(algue,aes(x = freq,fill=as.factor(speed)))
 test<- test+geom_histogram(binwidth = 5)
 test
 
-#sur le même graph
+#sur le même graph (pas sûr de ce graph)
 graph5<- qplot(data = algue, freq,Chla, facets=~as.factor(speed), geom = "boxplot", fill = as.factor(speed))
 graph5
 
