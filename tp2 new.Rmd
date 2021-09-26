@@ -1,0 +1,594 @@
+---
+title: "TP2new"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# TP2-LP Data Mining
+On va dans un premier temps charger les packages nécéssaires pour le TP. Attention, il faut éventuellement
+les installer au prélable. Les graphiques seront réalisés avec la fonction ggplot.
+```{r}
+library(ggplot2)
+library(readxl)
+library(knitr)
+library(reshape2)
+```
+
+## Exercice 1
+Dans cet exercice, on va travailler sur les résultats d’un questionnaire adressé à des médecins généralistes
+et portant sur l’insuffisance veineuse chronique (IVC). Les résultats de ce questionnaire sont donnés dans
+tableau de données IVC.xlxs. On ne va travailler que sur une partie des réponses. On va charger le jeu de
+données avec la fonction excel_sheet du package readxl.
+```{r}
+sheet_names <- excel_sheets("~\\R-Folder\\S1\\TP2\\IVC.xlsx")
+```
+
+## Partie 1
+Dans un premiers, on ne s’intéresse qu’aux données du premier onglet (données épidémiologiques) qui renseigne
+le profil des médecins ayant répondu au questionnaire. Pour cela, on effectue la commande
+```{r}
+donneesEpidemio <- read_excel("~\\R-Folder\\S1\\TP2\\IVC.xlsx",sheet = 1)
+```
+Puis, on retire les lignes vides
+```{r}
+donneesEpidemio <- na.omit(donneesEpidemio)
+```
+
+Voici un aperçu du tableau de données
+```{r}
+str(donneesEpidemio)
+```
+On peut remarquer que les données ne sont pas au format data.frame mais au format tibble. On ne va pas
+travailler directement avec ce format (on pourrait aussi). On va le transformer en objet data.frame.
+```{r}
+class(donneesEpidemio)
+dataTemp <- data.frame(donneesEpidemio)
+class(dataTemp)
+```
+
+On va également supprimer la première colonne qui ne renseigne que les numéros des individus
+```{r}
+dataTemp <- dataTemp[,-1]
+```
+
+On pourra noter que MSU signifie Maître de stage universitaire.
+## 1. Quelle est la dimension du tableau ?
+
+```{r}
+#Pour afficher les dimensions du tableau on utilise la commande dim()
+dim(dataTemp)
+```
+On observe ici que le tableau est composé de 8 colonnes et 158 lignes.
+
+## 2. Décrire les variables du jeu de données. On renseignera en particulier leur nature.
+En regardant le jeu de données on observe que les variables sont de type qualitatives.
+
+## 3. On donnera également des descriptifs numériques et visuels de ces variables.
+
+```{r}
+#Il est dans un premier temps nécessaire de transformer nos variables en factor pour faire des opérations dessus.
+sexe = as.factor(dataTemp$sexe)
+age = as.factor(dataTemp$âge)
+contexte.exercice= as.factor(dataTemp$contexte.exercice)
+type.exercice = as.factor(dataTemp$type.exercice)
+duree.exercice = as.factor(dataTemp$durée.exercice)
+departement = as.factor(dataTemp$departement)
+diplome = as.factor(dataTemp$diplôme.complémentaire)
+MSU = as.factor(dataTemp$MSU)
+```
+###Pour obtenir des résultats numérique on utilise les tables de contingence :
+```{r, results='hide'}
+table(sexe)
+table(age)
+table(contexte.exercice)
+table(type.exercice)
+table(duree.exercice)
+table(departement)
+table(diplome)
+table(MSU)
+```
+A l'aide de ces tables on peut obtenir des informations en utilisant diverses commandes, par exemple la moyenne d'homme médecin. 
+```{r}
+mean(sexe=='M')
+```
+
+```{r}
+par(mfrow = c(2, 4))
+barplot(table(diplome[!diplome=="Aucun"]), horiz=TRUE, las=1, col= "purple", border = "white",main= "Spécialisation") # on retire les médecins sans spécialisation pour une meilleure lecture du graphique
+pie(table(sexe), col = c("pink","azure"), main = "Proportion H/F")
+pie(table(age), main= "Ages")
+pie(table(contexte.exercice), col = c("pink","azure"), main= "Contexte d'exercice")
+pie(table(type.exercice), main = "Type d'exercice")
+pie(table(duree.exercice), main = "Durée d'exercice")
+pie(table(departement),main = "Departement d'exercice")
+pie(table(MSU),main= "Msu")
+```
+
+
+##4. Dans quelle région le questionnaire a-t-il été réalisé ?
+```{r,echo=TRUE,include=FALSE}
+#install.packages("maps")
+library(maps)
+france<-map(database="france")
+france$names #récup les départements de france
+match <- match.map(france,departement) # on match les départements en france avec ceux présent dans notre dataframe
+col<-c(1,2,3,4,5,6) # je récupère les valeurs de match et je fais un vecteur avec 
+match <- match.map(france,departement) 
+color <- col[match]
+
+```
+
+```{r}
+map(database="france", fill=TRUE, col=color)
+```
+
+On observe que les départements en colorés correspondent à la région Picardie, c'est ici que le questionnaire a été réalisé. 
+
+## 5. À l’aide de descriptif visuels et numériques, décrire les intéractions entre la variable département et contexte d’exercice, âge et contexte d’exercice, âge et sexe et âge et diplôme complémentaire.
+
+```{r echo=TRUE,include=FALSE}
+graph <- ggplot(dataTemp, aes(x = departement, fill = contexte.exercice)) + geom_bar()+ scale_fill_manual(values = c("rural"="chartreuse3","urbain"="azure"))
+graph <- graph + labs(x = "Départements", y = "Effectifs", fill = "Contexte d'exercice",
+title = "Contextes d'exercice en fonction des departement")
+graph
+#scale_fill_manual()
+graph2 <- ggplot(dataTemp, aes(x = contexte.exercice, fill = age)) + geom_bar(position = "dodge")+ scale_fill_brewer(palette= "RdPu")
+graph2 <- graph2 + labs(x = "Contexte d'exercice", y = "Effectifs", fill = "Age des medecins",
+title = "Contextes d'exercice en fonction de l'age ")
+graph2
+graph3 <- ggplot(dataTemp, aes(x = age, fill = sexe)) + geom_bar(position = "dodge")+ scale_fill_manual (values = c("F"= "#FF3399", "M"="#3399FF"))
+graph3 <- graph3 + labs(x = "Age", y = "Effectifs", fill = "Sexe",
+title = "Age en fonction du sexe")
+graph3
+graph4 <- ggplot(dataTemp, aes(x =diplome, fill = age)) + geom_bar() + scale_fill_grey()
+graph4<- graph4 + labs(x = "Spécialisation", y = "Effectifs", fill = "Age",
+title = "Spécialisation en fonction de l'Age")
+graph4
+```
+
+```{r fig.width=10}
+#install.packages("cowplot")
+library(cowplot)
+plot_grid(graph,graph2,graph3,graph4, align = "hV") 
+```
+
+```{r}
+#install.packages("knitr")
+library(knitr)
+t1= table(departement,contexte.exercice)
+t2= table(age,contexte.exercice)
+t3= table(age,sexe)
+t4= table(diplome,age)
+```
+
+
+```{r echo=FALSE, results='asis'}
+knitr::kable(head(t1),caption = "Les contextes d'exercice en fonction du département")
+knitr::kable(head(t2),caption = "Les contextes d'exercice en fonction de l'age des practiciens")
+knitr::kable(head(t3),caption = "Les ages en fonction du sexe des practiciens")
+knitr::kable(head(t4),caption = "Les spécialisation en fonction de l'age des practiciens")
+
+```
+##6. Décrire succintement les résultats obtenus.
+En Picardie, seul le département de l'Ainse comporte plus de médecins pratiquant en milieu urbain qu'en milieu rural. Dans la Somme et l'Oise, la majorité des médecins pratiquent dans un cadre rural. 
+
+## 7. Quelle est le pourcentage, au sein de l’échantillon, de praticiens qui exercent seuls.
+```{r}
+seul = c(which(dataTemp$type.exercice== "seul"))
+length(seul)/length(dataTemp$type.exercice)*100
+```
+31.6% des praticiens exercent seuls leur métier. 
+
+## 8. Donner le pourcentage, au sein de l’échantillon, de praticiens de moins de 45 ans qui exercent depuis moins de 10 ans.
+```{r}
+nb_45_et_10 <- which(age=="<45 ans" & duree.exercice == "<10 ans")
+ # 32 médecins <45 ans et durée <10ans
+length(nb_45_et_10)/length(dataTemp$type.exercice)*100
+```
+Les practitiens de moins de 45 ans qui exercent depuis moins de 10 ans représentent 20.2% de l'échantillon.
+## 9. Donner le pourcentage, au sein de l’échantillon, de praticiens de plus de 54 ans qui exercent dans la Somme.
+```{r}
+S54 = c(which(dataTemp$departement== "Somme" & dataTemp$âge== ">54 ans"))
+length(S54)/length(dataTemp$âge)* 100
+```
+Les practiciens de plus de 54 ans qui exercent dans la Somme represente 16,45% de l'echantillion.
+
+# Partie 2
+Dans une deuxième partie, on va travailler sur les résultats des questions 1, 3 et 5 dont les intitulés sont les
+suivant
+• Question 1: Vous arrive-t-il d’aborder le sujet de l’insuffisance veineuse lors d’une consultation alors
+même qu’il ne s’agit pas du motif principal de consultation ?
+• Question 3: Quels sont les 3 principaux motifs de consultation d’IVC de vos patients ?
+• Question 5: Quels sont les trois signes cliniques les plus évocateurs d’IVC ?
+Pour charger les réponses de la question 1, on effectue la commande
+```{r}
+question1 <- read_excel("~\\R-Folder\\S1\\TP2\\IVC.xlsx",sheet = 2)
+```
+
+## 1. Selon les réponses des praticiens, quels sont les trois motifs principaux de consultation ? Expliquer la démarche et donner un descriptif visuel du résultat.
+
+```{r}
+question3 <- read_excel("~\\R-Folder\\S1\\TP2\\IVC.xlsx",sheet = 4)
+question3 = question3[,-1]
+question3 = na.omit(question3)
+
+#descriptif numérique 
+summary(question3)
+```
+On regarde ici la médiane, les 3 motifs principaux possèdent une médiale égale 1, on peut aussi regarder les moyennes se rapprochant le plus de 1. Ces signes distinctifs permettent d'identifier les motifs pour lesquels il y a eu le plus de consultations.
+On peut également vérifier via des tables : 
+```{r echo = FALSE }
+T1 = table(question3$`D, L, I`)
+T2 = table(question3$`T, V`)
+T3 = table(question3$Varices)
+T4 = table(question3$`Oedème MI`)
+T5 = table(question3$`Dermite de stase`)
+T6 = table(question3$Eczéma)
+T7 = table(question3$`Dermite ocre`)
+T8 = table(question3$`Atrophie blanche`)
+T9 = table(question3$Lipodermatosclérose)
+T10 = table(question3$`Ulcère(s)`)
+```
+
+```{r echo=FALSE, results='asis'}
+
+matrice <- cbind(T1,T2,T3,T4,T5,T6,T7,T10) # pas de cas pour motif 8 et 9 donc on les retire du graph pour éviter les erreurs
+knitr::kable(head(matrice),caption = "Matrice des consultations")
+#knitr::kable(head(T2),caption = "Nb  T,V")
+#knitr::kable(head(T3),caption = "Nb Varices")
+#knitr::kable(head(T4),caption = "Nb Oedème MI")
+#knitr::kable(head(T5),caption = "Nb Dermite de stase")
+#knitr::kable(head(T6),caption = "Nb Eczéma")
+#knitr::kable(head(T7),caption = "Nb Dermite ocre")
+#knitr::kable(head(T8),caption = "Nb Atrophie blanche")
+#knitr::kable(head(T9),caption = "Nb Lipodermatosclérose")
+#knitr::kable(head(T10),caption = "Nb Ulcère(s)")
+```
+
+
+
+On remarque bien que le nombre de consultations "1" pour "T1","T2","T3" sont les plus élévés(T1= "D, L, I ", T2 = "Varices" et T3= "Oedème MI".)
+
+
+```{r}
+#descriptif visuel 
+barplot(matrice[2,1:8], col = c("pink","azure","blue4","yellow","chartreuse3","green","purple","grey"), main = "Proportion des motifs")
+
+```
+
+## 2. Même question pour les trois signes cliniques les plus évocateurs d’IVC. Que constatez-vous ?
+```{r}
+question5<- read_excel("~\\R-Folder\\S1\\TP2\\IVC.xlsx",sheet = 6)
+
+question5 = question5[,-1]
+question5 = na.omit(question5)
+summary(question5)
+
+
+
+M1 = table(question5$Varices)
+M2 = table(question5$`T, V`)
+M3 = table(question5$`Oedème MI`)
+M4 = table(question5$`Dermite de stase`)
+M5 = table(question5$Eczéma)
+M6 = table(question5$`Dermites ocre`)
+M7 = table(question5$`Atrophie blanche`)
+M8 = table(question5$Lipodermatosclérose)
+M9 = table(question5$`Ulcère(s)`)
+matrice2 <- cbind(M1,M2,M3,M4,M5,M6,M7,M8,M9) 
+
+knitr::kable(head(matrice2),caption = "Matrice des consultations des signes les plus évocateurs d'IVC")
+
+barplot(matrice2[2,], col = c("pink","azure","blue4","yellow","chartreuse3","green","purple","grey"), main = "Proportion des motifs IVC")
+
+```
+# TODO : trouver ce qu'il faut constater 
+
+## 3. Parmis les médecins ayant donné la réponse Varices comme signe clinique, quel est le pourcentage ayant répondu souvent à la question 1 ?
+
+
+```{r}
+# On sait que 126 medecins ont évoqué la réponse varices comme signe clinique, on doit à présent récupérer le nombre de "souvent" à la question 1.
+question1<- read_excel("~\\R-Folder\\S1\\TP2\\IVC.xlsx",sheet = 2)
+question1 = question1[,-1]
+question1 = na.omit(question1)
+
+factorQuestion1 = as.factor(question1$Q1)
+
+#levels(factorQuestion1)
+
+nbSouvent = which(factorQuestion1=="Souvent") 
+prop_souvent_varice = length(nbSouvent)/length(question1$Q1)
+
+prop_souvent_varice*100 #calcul du pourcentage
+```
+24% des médecins  ayant donné la réponse "varices" comme signe clinique ont répondu "souvent" à la question 1.
+
+# Exercice 2
+L’effloresence alguale est un phénomène de prolifération d’algues toxiques dans un cours d’eau. Si il n’est pas contrôlé, le phénomène peut conduire à un déséquilibre de l’écosystème du cours d’eau. Dans le tableau de données algue ont été recueillies des mesures effectuées à différents endroits du cours d’eau. Dans ce tableau, on a également indiqué à l’aide de la variable freq la concentration moyenne d’algues toxiques dans le cours
+d’eau. Dans le tableau de données, les variables explicatives sont de natures qualitatives (taille du cours d’eau,
+saison où on été effectuées les mesures et vitesse de débit) et quantitatives. Les variables quantitatives sont
+des mesures de différents paramètres chimiques (PH, oxygen, chloride, nitrate, ammonium, orthophosphate
+et chlorophylle). Tout d’abord on va charger le jeu de données
+```{r}
+load("donnee.RData")
+```
+
+La fonction pairs permet de donner un descriptif visuel de la correlation entre les variables quantitatives du
+jeu de données. 
+Par exemple :
+```{r}
+pairs(algue[,4:6])
+```
+
+# 1. Décrire les variables du jeu de données. On renseignera en particulier leur nature.
+```{r, results='hide'}
+str(algue)
+```
+
+Le jeu de données "algue" est composé de 184 observations et de 12 variables dont 3 qualitatives et 9 quantitatives. 
+détails ci dessous : 
+ $ season: qualitative
+ $ size  : qualitative
+ $ speed : qualitative
+ $ mxPH  : quantitative 
+ $ mnO2  : quantitative 
+ $ Cl    : quantitative 
+ $ NO3   : quantitative 
+ $ NH4   : quantitative 
+ $ oPO4  : quantitative 
+ $ PO4   : quantitative 
+ $ Chla  : quantitative 
+ $ freq  : quantitative 
+ 
+ 
+
+# 2. Décrire à l’aide de descriptifs numériques et visuels les variables size, season, mxPH, Chla et freq.
+
+```{r}
+size      = algue$size  #on récupère nos données
+season    = algue$season
+mxPH      = algue$mxPH
+Chla      = algue$Chla
+frequence = algue$freq
+
+```
+
+```{r, echo=FALSE}
+size      = as.factor(algue$size)  #on transforme nos données
+season    = as.factor(algue$season)
+
+```
+
+```{r echo= FALSE,results='asis'}
+knitr::kable(table(size),caption = "Tableau de contingence de size")
+knitr::kable(table(season),caption = "Tableau de contingence de season")
+
+
+```
+
+```{r}
+#descriptifs numériques summary() est la fonction la plus utile dans ce cas 
+summary(Chla)
+```
+
+```{r}
+summary(mxPH)
+```
+
+```{r}
+summary(frequence)
+```
+
+Descriptifs visuels :
+
+```{r}
+library(DataExplorer)
+
+graphSize <- ggplot(algue, aes(x = size, fill = size)) + geom_bar()+ scale_fill_manual(values = c("large"="cyan2","small"="darkblue","medium"="darkcyan"))
+graphSeason <- ggplot(algue, aes(x = season, fill = season)) + geom_bar()+ scale_fill_manual(values = c("spring"="darkolivegreen3","summer"="darkgoldenrod1","winter"="azure","autumn"="darkkhaki"))
+
+
+graphSize
+graphSeason
+#install.packages("DataExplorer")
+
+#create_report(algue)
+plot_histogram(mxPH,title="mxPH",ggtheme = theme_bw())
+plot_histogram(Chla,title="Chla",ggtheme = theme_bw())
+plot_histogram(frequence,title="Freq",ggtheme = theme_bw())
+
+```
+
+
+
+# 3. Comparer la distribution des variables mxPH et Chla. On pourra par exemple donner un histogramme représentant leur distribution.
+
+```{r}
+#pour étudier une distribution on regarde la variance et l'écart type 
+var(mxPH)
+var(Chla)
+sd(mxPH)
+sd(Chla)
+#histogrammes
+plot_histogram(mxPH,title="distribution mxPH",ggtheme = theme_bw())
+plot_histogram(Chla,title="distribution Chla",ggtheme = theme_bw())
+#attach(algue)
+
+#on peut les afficher sur le même graph mais mxPH n'est plus possible à analyser
+fig <- ggplot(melt(data.frame(mxPH=mxPH, Chla = Chla))) + geom_boxplot(aes(x = variable, y = value)) 
+fig # on les affiche sur le même graph
+
+#je trouve qu'il est plus facile de comparer les distributions avec des boxplot
+boxplot(mxPH) # mhPH boxplot
+boxplot(Chla) 
+
+
+```
+### TODO : On constate une distribution complètement différentes entre les 2. (phrase à faire)
+
+# 4. Quelles sont les deux variables les plus corrélées avec la variable freq ?
+
+```{r}
+
+# pour trouver les deux variables les plus corrélées avec la variable freq on utilise une matrice de corrélation, on récupèrera les variables les plus proche de 1. 
+
+mcor = cor(algue[,4:12])
+mcor
+
+#on peut aussi utiliser un descriptif visuel 
+
+plot_correlation(na.omit(algue))
+
+```
+les deux variables les plus corrélées avec la variable freq sont "oPo4" et "PO4" selon les critères de corrélation de Spearman
+
+# 5. Étudier la liaison linéaire entre ces variables et la variable freq.
+```{r}
+#pour étudier la liaison linéaire on s'appuie sur le coefficient de corrélation linéaire 
+
+attach(algue)
+cor(freq,algue$oPO4) # 0,54 étant supérieur à 0,5 on considère qu'il existe une corrélation liénaire entre ces 2 variables
+cor(freq,algue$PO4)  # 0,66 étant supérieur à 0,6 on considère qu'il existe une corrélation linéaire entre ces 2 variables 
+
+# on peut dire que freq est corrélée positivement aux variables PO4 et oPO4 
+lmpo4freq = lm(freq~algue$PO4)
+lmopo4freq = lm(freq~algue$oPO4)
+
+
+
+#partie graphique
+
+#plot(freq,algue$oPO4)
+#abline(lmopo4freq, col="red")
+#plot(freq,algue$PO4)
+#abline(lmpo4freq, col="red")
+
+graph4<- ggplot(algue,aes(x=freq,y=oPO4))
+graph4<- graph4 + geom_point()+geom_smooth(formula = y~x, method = lm)
+graph4
+
+```
+
+
+# 6. Discuter la liaison statistique entre les variables PO4 et oPO4. On donnera un descriptif visuel du nuage de point formé par ces deux variables et la droite de régression.
+
+```{r}
+#étude du cov
+cov(x = PO4,y = oPO4)
+
+#étude du cor
+cor(PO4,oPO4)
+
+
+#création modèle linéaire 
+model.lin = lm(PO4~oPO4, data = algue)
+summary(model.lin)
+
+
+#partie graphique
+plot(x=oPO4,y=PO4) # trace le nuage de points
+abline(model.lin,col="red") #trace la ligne
+graph1<- ggplot(algue,aes(x=PO4,y=oPO4))
+graph1<- graph1 + geom_point()+geom_smooth(formula = y~x, method = lm)
+graph1
+```
+
+
+### TODO : faire une phrase ¯\_(ツ)_/¯
+
+# 7. Même question avec les variables NH4 et NO3.
+```{r}
+
+attach(algue)
+#étude du cov
+cov(x = NH4,y = NO3)
+
+#étude du cor
+cor(NH4,NO3)
+
+
+#création modèle linéaire
+model.lin2 = lm(NH4~NO3,data = algue)
+summary(model.lin2)
+
+
+#partie graphique
+plot(x=NO3,y=NH4) # trace le nuage de points
+abline(model.lin2,col="red") #trace la ligne
+graph2<- ggplot(algue,aes(x=NO3,y=NH4))
+graph2<- graph2 + geom_point()+geom_smooth(formula = y~x, method = lm)
+graph2
+
+
+```
+### TODO : FAIRE UNE PHRASEEEEEEEEEEEEEEEEE ¯\_(ツ)_/¯
+
+# 8. Peut-on dire que les variables freq et mxPH ne sont pas statistiquement liées ?
+```{r}
+#étude du cov
+cov(x = freq,y = mxPH)
+
+#étude du cor
+cor(freq,mxPH)
+
+#création d'un modèle linéaire 
+model.lin3 = lm(freq~mxPH, data = algue)
+
+#affiche des stats
+summary(model.lin3)
+
+
+#partie graph
+plot(x=mxPH,y=freq) # trace le nuage de points
+abline(model.lin3,col="red") #trace la ligne
+graph3<- ggplot(algue,aes(x=freq,y=mxPH))
+graph3<- graph3 + geom_point()+geom_smooth(formula = y~x, method = lm)
+graph3
+```
+Pas de liaison linéaire car le nuage de points n'est pas structuré cependant on ne peut pas conclure à une abscence de liaison statistique entre ces 2 variables. 
+
+
+# 9. Décrire les interactions entre les variables freq et speed et entre les variables Chla et speed. Commenter.On appuiera sa réponse à l’aide d’un descriptif visuel. 
+
+```{r}
+#cor(freq,as.factor(speed))
+
+
+#graphique freq par speed
+boxplot(algue$freq ~ algue$speed)
+
+#table 
+
+library(dplyr)
+freq_high <- filter(algue, speed == "high")
+freq_medium <- filter(algue, speed == "medium")
+freq_low <- filter(algue,speed =="low")
+
+mean(as.factor(algue$speed))
+#hist(freq_high)
+
+par( mfrow =c(1 ,2))
+test<- ggplot(algue,aes(x = freq,fill=as.factor(speed)))
+test<- test+geom_histogram(binwidth = 5)
+test
+
+#sur le même graph
+graph5<- qplot(data = algue, freq,Chla, facets=~as.factor(speed), geom = "boxplot", fill = as.factor(speed))
+graph5
+
+
+
+test2<- ggplot(algue,aes(x = Chla,fill=as.factor(speed)))
+test2<- test2+geom_histogram(binwidth = 5)
+test2
+
+```
+
+
+
+### TODO : ¯\_(ツ)_/¯
+
